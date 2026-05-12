@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Culinary Assistant — Multi-Agent Kitchen</title>
+    <meta name="description" content="Generate gourmet recipes and nutritional analysis powered by a 4-agent AI architecture using Google Gemini.">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Outfit', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fef3ee',
+                            100: '#fde4d4',
+                            200: '#fac5a8',
+                            300: '#f6a071',
+                            400: '#f17038',
+                            500: '#ee5012',
+                            600: '#df3708',
+                            700: '#b92609',
+                            800: '#93200f',
+                            900: '#771d10',
+                            950: '#400b06',
+                        },
+                        surface: {
+                            50: '#f8f9fc',
+                            100: '#f0f1f5',
+                            200: '#e4e5eb',
+                            700: '#1e2030',
+                            800: '#161825',
+                            900: '#0f1019',
+                            950: '#090a10',
+                        },
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+                        'slide-up': 'slide-up 0.5s ease-out',
+                        'fade-in': 'fade-in 0.4s ease-out',
+                        'shimmer': 'shimmer 2s linear infinite',
+                        'spin-slow': 'spin 3s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        'glow-pulse': {
+                            '0%, 100%': { opacity: '0.4' },
+                            '50%': { opacity: '1' },
+                        },
+                        'slide-up': {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        'fade-in': {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        'shimmer': {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: #f17038 #161825; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #161825; }
+        ::-webkit-scrollbar-thumb { background: #f17038; border-radius: 3px; }
+
+        .glass {
+            background: rgba(30, 32, 48, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .glass-light {
+            background: rgba(30, 32, 48, 0.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .glow-border {
+            position: relative;
+        }
+        .glow-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            background: linear-gradient(135deg, #f17038, #ee5012, #df3708, #f17038);
+            background-size: 300% 300%;
+            animation: gradient-shift 4s ease infinite;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .glow-border:hover::before,
+        .glow-border:focus-within::before {
+            opacity: 1;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .bg-grid {
+            background-image:
+                linear-gradient(rgba(241, 112, 56, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(241, 112, 56, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        .hero-gradient {
+            background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(241, 112, 56, 0.15), transparent);
+        }
+
+        /* Markdown rendered content styles */
+        .markdown-body h2 { font-size: 1.35rem; font-weight: 700; color: #f6a071; margin: 1.5rem 0 0.75rem; font-family: 'Outfit', sans-serif; }
+        .markdown-body h3 { font-size: 1.1rem; font-weight: 600; color: #fac5a8; margin: 1.25rem 0 0.5rem; font-family: 'Outfit', sans-serif; }
+        .markdown-body p { color: #c9cad4; line-height: 1.75; margin-bottom: 0.75rem; }
+        .markdown-body ul, .markdown-body ol { color: #c9cad4; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body li { margin-bottom: 0.35rem; line-height: 1.65; }
+        .markdown-body ul li { list-style-type: disc; }
+        .markdown-body ol li { list-style-type: decimal; }
+        .markdown-body strong { color: #fde4d4; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .markdown-body th { background: rgba(241, 112, 56, 0.15); color: #f6a071; padding: 0.6rem 1rem; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(241, 112, 56, 0.3); }
+        .markdown-body td { padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: #c9cad4; }
+        .markdown-body tr:hover td { background: rgba(241, 112, 56, 0.05); }
+        .markdown-body hr { border-color: rgba(255,255,255,0.06); margin: 1.5rem 0; }
+
+        /* Status pill animations */
+        .status-pulse {
+            animation: status-blink 1.2s ease-in-out infinite;
+        }
+        @keyframes status-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Audio player */
+        .audio-player audio {
+            width: 100%;
+            border-radius: 12px;
+            outline: none;
+        }
+        .audio-player audio::-webkit-media-controls-panel {
+            background: rgba(30, 32, 48, 0.9);
+        }
+
+        /* Shimmer loading */
+        .shimmer-bg {
+            background: linear-gradient(90deg, rgba(241,112,56,0.05) 25%, rgba(241,112,56,0.12) 50%, rgba(241,112,56,0.05) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+        }
+
+        /* Agent card connector lines  */
+        .agent-connector {
+            position: relative;
+        }
+        .agent-connector::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(to bottom, rgba(241,112,56,0.4), transparent);
+        }
+
+        .input-glow:focus {
+            box-shadow: 0 0 0 2px rgba(241, 112, 56, 0.3), 0 0 20px rgba(241, 112, 56, 0.1);
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(241, 112, 56, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-surface-950 text-white font-sans min-h-screen bg-grid">
+
+    <!-- ═══ Background Effects ═══ -->
+    <div class="fixed inset-0 pointer-events-none hero-gradient"></div>
+    <div class="fixed top-20 right-20 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl animate-float pointer-events-none"></div>
+    <div class="fixed bottom-20 left-10 w-72 h-72 bg-brand-400/5 rounded-full blur-3xl animate-float pointer-events-none" style="animation-delay: -3s;"></div>
+
+    <!-- ═══ Main Container ═══ -->
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ═══ Header ═══ -->
+        <header class="text-center mb-12 animate-slide-up">
+            <div class="inline-flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-2xl shadow-lg shadow-brand-500/25">
+                    🍳
+                </div>
+                <h1 class="text-4xl sm:text-5xl font-display font-800 bg-gradient-to-r from-brand-300 via-brand-400 to-brand-500 bg-clip-text text-transparent">
+                    AI Culinary Assistant
+                </h1>
+            </div>
+            <p class="text-surface-200/60 text-lg font-light max-w-xl mx-auto">
+                Powered by a <span class="text-brand-400 font-medium">4-Agent Architecture</span> — from recipe creation to nutritional narration
+            </p>
+
+            <!-- Agent Pipeline Indicator -->
+            <div class="flex items-center justify-center gap-2 mt-6 flex-wrap">
+                <div id="agent-sous-chef" class="agent-pill glass-light rounded-full px-4 py-1.5 text-xs font-medium text-surface-200/50 flex items-center gap-2 transition-all duration-300">
+                    <span class="w-2 h-2 rounded-full bg-surface-200/20"></span>
+                    Sous-Chef
+                </div>
+                <svg class="w-4 h-4 text-surface-200/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <div id="agent-nutritionist" class="agent-pill glass-light rounded-full px-4 py-1.5 text-xs font-medium text-surface-200/50 flex items-center gap-2 transition-all duration-300">
+                    <span class="w-2 h-2 rounded-full bg-surface-200/20"></span>
+                    Nutritionist
+                </div>
+                <svg class="w-4 h-4 text-surface-200/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <div id="agent-narrator" class="agent-pill glass-light rounded-full px-4 py-1.5 text-xs font-medium text-surface-200/50 flex items-center gap-2 transition-all duration-300">
+                    <span class="w-2 h-2 rounded-full bg-surface-200/20"></span>
+                    Narrator
+                </div>
+                <svg class="w-4 h-4 text-surface-200/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <div id="agent-archivist" class="agent-pill glass-light rounded-full px-4 py-1.5 text-xs font-medium text-surface-200/50 flex items-center gap-2 transition-all duration-300">
+                    <span class="w-2 h-2 rounded-full bg-surface-200/20"></span>
+                    Archivist
+                </div>
+            </div>
+        </header>
+
+        <!-- ═══ Main Grid ═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- ═══ Left Panel — Input ═══ -->
+            <div class="lg:col-span-4 space-y-6 animate-slide-up" style="animation-delay: 0.1s;">
+
+                <!-- Input Card -->
+                <div class="glass rounded-3xl p-6 glow-border">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-xl">🥘</div>
+                        <div>
+                            <h2 class="font-display font-700 text-lg text-white">What's in your kitchen?</h2>
+                            <p class="text-xs text-surface-200/40">Tell the Sous-Chef what you have</p>
+                        </div>
+                    </div>
+
+                    <form id="recipe-form" class="space-y-4">
+                        <div>
+                            <label for="ingredients-input" class="block text-sm font-medium text-surface-200/60 mb-2">
+                                Ingredients
+                            </label>
+                            <textarea
+                                id="ingredients-input"
+                                rows="4"
+                                placeholder="e.g. chicken breast, garlic, lemon, rosemary, olive oil, potatoes..."
+                                class="w-full bg-surface-900/80 border border-white/5 rounded-2xl px-4 py-3 text-sm text-white placeholder-surface-200/25 focus:outline-none input-glow transition-all duration-300 resize-none"
+                            ></textarea>
+                        </div>
+
+                        <div>
+                            <label for="cuisine-input" class="block text-sm font-medium text-surface-200/60 mb-2">
+                                Cuisine Preference
+                            </label>
+                            <div class="relative">
+                                <select
+                                    id="cuisine-input"
+                                    class="w-full bg-surface-900/80 border border-white/5 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none input-glow transition-all duration-300 appearance-none cursor-pointer"
+                                >
+                                    <option value="">Select a cuisine...</option>
+                                    <option value="Italian">🇮🇹 Italian</option>
+                                    <option value="Indian">🇮🇳 Indian</option>
+                                    <option value="Japanese">🇯🇵 Japanese</option>
+                                    <option value="Mexican">🇲🇽 Mexican</option>
+                                    <option value="French">🇫🇷 French</option>
+                                    <option value="Thai">🇹🇭 Thai</option>
+                                    <option value="Chinese">🇨🇳 Chinese</option>
+                                    <option value="Mediterranean">🌊 Mediterranean</option>
+                                    <option value="Korean">🇰🇷 Korean</option>
+                                    <option value="American">🇺🇸 American</option>
+                                    <option value="Middle Eastern">🕌 Middle Eastern</option>
+                                    <option value="Ethiopian">🇪🇹 Ethiopian</option>
+                                </select>
+                                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-200/30 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="generate-btn"
+                            class="w-full relative overflow-hidden bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold py-3.5 rounded-2xl transition-all duration-300 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 group"
+                        >
+                            <span id="generate-btn-text" class="flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Generate Recipe
+                            </span>
+                            <span id="generate-btn-loading" class="hidden flex items-center justify-center gap-2">
+                                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                Sous-Chef is cooking...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Status Log Card -->
+                <div class="glass rounded-3xl p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-xl">📡</div>
+                        <div>
+                            <h2 class="font-display font-700 text-lg text-white">Agent Status</h2>
+                            <p class="text-xs text-surface-200/40">Real-time pipeline monitor</p>
+                        </div>
+                    </div>
+                    <div id="status-log" class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        <div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-surface-900/40 text-xs text-surface-200/40">
+                            <span class="w-1.5 h-1.5 rounded-full bg-surface-200/20"></span>
+                            Waiting for input...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recipe History Card -->
+                <div class="glass rounded-3xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center text-xl">📚</div>
+                            <div>
+                                <h2 class="font-display font-700 text-lg text-white">Archives</h2>
+                                <p class="text-xs text-surface-200/40">Past creations</p>
+                            </div>
+                        </div>
+                        <button id="refresh-history-btn" onclick="loadHistory()" class="text-xs text-brand-400 hover:text-brand-300 transition-colors">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="history-list" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        <div class="text-xs text-surface-200/30 text-center py-4">No recipes yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Right Panel — Output ═══ -->
+            <div class="lg:col-span-8 space-y-6 animate-slide-up" style="animation-delay: 0.2s;">
+
+                <!-- Recipe Result Card -->
+                <div class="glass rounded-3xl p-6 min-h-[300px]">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-xl">📖</div>
+                            <div>
+                                <h2 class="font-display font-700 text-lg text-white">Recipe</h2>
+                                <p class="text-xs text-surface-200/40">Generated by the Sous-Chef</p>
+                            </div>
+                        </div>
+                        <button
+                            id="analyze-btn"
+                            onclick="analyzeNutrition()"
+                            class="hidden items-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-sm font-medium px-5 py-2.5 rounded-xl transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            <span id="analyze-btn-text">Analyze Nutrition</span>
+                            <span id="analyze-btn-loading" class="hidden flex items-center gap-2">
+                                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                Analyzing...
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="recipe-empty" class="flex flex-col items-center justify-center py-16 text-center">
+                        <div class="text-6xl mb-4 animate-float">👨‍🍳</div>
+                        <h3 class="font-display font-600 text-xl text-surface-200/40 mb-2">Ready to Cook</h3>
+                        <p class="text-sm text-surface-200/25 max-w-sm">Enter your ingredients and pick a cuisine to let the Sous-Chef craft a gourmet recipe for you.</p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="recipe-loading" class="hidden space-y-4 py-8">
+                        <div class="h-8 w-2/3 rounded-xl shimmer-bg"></div>
+                        <div class="h-4 w-full rounded-lg shimmer-bg"></div>
+                        <div class="h-4 w-5/6 rounded-lg shimmer-bg"></div>
+                        <div class="h-4 w-4/6 rounded-lg shimmer-bg"></div>
+                        <div class="h-6 w-1/3 rounded-lg shimmer-bg mt-4"></div>
+                        <div class="h-4 w-full rounded-lg shimmer-bg"></div>
+                        <div class="h-4 w-5/6 rounded-lg shimmer-bg"></div>
+                    </div>
+
+                    <!-- Recipe Content (Markdown rendered) -->
+                    <div id="recipe-content" class="hidden markdown-body"></div>
+                </div>
+
+                <!-- Nutrition + Audio Card -->
+                <div id="nutrition-card" class="hidden glass rounded-3xl p-6 animate-slide-up">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Nutrition Panel -->
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-xl">🥦</div>
+                                <div>
+                                    <h2 class="font-display font-700 text-lg text-white">Nutrition</h2>
+                                    <p class="text-xs text-surface-200/40">Analyzed by the Nutritionist</p>
+                                </div>
+                            </div>
+
+                            <!-- Nutrition Loading -->
+                            <div id="nutrition-loading" class="space-y-3">
+                                <div class="h-4 w-full rounded-lg shimmer-bg"></div>
+                                <div class="h-4 w-4/5 rounded-lg shimmer-bg"></div>
+                                <div class="h-4 w-3/5 rounded-lg shimmer-bg"></div>
+                            </div>
+
+                            <!-- Nutrition Content -->
+                            <div id="nutrition-content" class="hidden markdown-body max-h-[500px] overflow-y-auto pr-2"></div>
+                        </div>
+
+                        <!-- Audio Panel -->
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center text-xl">🎙️</div>
+                                <div>
+                                    <h2 class="font-display font-700 text-lg text-white">Audio Summary</h2>
+                                    <p class="text-xs text-surface-200/40">Narrated by the Narrator (Kore)</p>
+                                </div>
+                            </div>
+
+                            <!-- Audio Loading -->
+                            <div id="audio-loading" class="space-y-3">
+                                <div class="h-12 w-full rounded-2xl shimmer-bg"></div>
+                                <div class="text-xs text-surface-200/30 text-center">Generating voice narration...</div>
+                            </div>
+
+                            <!-- Audio Player -->
+                            <div id="audio-player-container" class="hidden">
+                                <div class="glass-light rounded-2xl p-5">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-400/20 to-violet-400/20 flex items-center justify-center">
+                                            <svg id="audio-icon-play" class="w-6 h-6 text-sky-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            <svg id="audio-icon-wave" class="hidden w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-white">Nutritional Summary</p>
+                                            <p class="text-xs text-surface-200/40">Voice: Kore • PCM 24kHz</p>
+                                        </div>
+                                    </div>
+                                    <audio id="audio-player" controls class="w-full rounded-xl" style="height:42px;"></audio>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Footer ═══ -->
+        <footer class="text-center mt-16 mb-8 text-xs text-surface-200/20">
+            <p>AI Culinary Assistant — Multi-Agent Architecture powered by <span class="text-brand-400/50">Google Gemini</span></p>
+        </footer>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         JavaScript — Client-Side Logic
+         ═══════════════════════════════════════════════════════════════ -->
+    <script>
+        // ── State ─────────────────────────────────────────────────────
+        let currentRecipeId = null;
+
+        // ── DOM References ────────────────────────────────────────────
+        const form              = document.getElementById('recipe-form');
+        const ingredientsInput  = document.getElementById('ingredients-input');
+        const cuisineInput      = document.getElementById('cuisine-input');
+        const generateBtn       = document.getElementById('generate-btn');
+        const generateBtnText   = document.getElementById('generate-btn-text');
+        const generateBtnLoading= document.getElementById('generate-btn-loading');
+        const analyzeBtn        = document.getElementById('analyze-btn');
+        const analyzeBtnText    = document.getElementById('analyze-btn-text');
+        const analyzeBtnLoading = document.getElementById('analyze-btn-loading');
+
+        const recipeEmpty       = document.getElementById('recipe-empty');
+        const recipeLoading     = document.getElementById('recipe-loading');
+        const recipeContent     = document.getElementById('recipe-content');
+
+        const nutritionCard     = document.getElementById('nutrition-card');
+        const nutritionLoading  = document.getElementById('nutrition-loading');
+        const nutritionContent  = document.getElementById('nutrition-content');
+
+        const audioLoading      = document.getElementById('audio-loading');
+        const audioPlayerContainer = document.getElementById('audio-player-container');
+        const audioPlayer       = document.getElementById('audio-player');
+        const audioIconPlay     = document.getElementById('audio-icon-play');
+        const audioIconWave     = document.getElementById('audio-icon-wave');
+
+        const statusLog         = document.getElementById('status-log');
+        const historyList       = document.getElementById('history-list');
+
+        // ── Agent pills ───────────────────────────────────────────────
+        const agentPills = {
+            'sous-chef':    document.getElementById('agent-sous-chef'),
+            'nutritionist': document.getElementById('agent-nutritionist'),
+            'narrator':     document.getElementById('agent-narrator'),
+            'archivist':    document.getElementById('agent-archivist'),
+        };
+
+        // ── Utility: Status Logger ────────────────────────────────────
+        function logStatus(message, type = 'info') {
+            const colors = {
+                info:    'bg-sky-500/15 text-sky-400',
+                success: 'bg-emerald-500/15 text-emerald-400',
+                warning: 'bg-amber-500/15 text-amber-400',
+                error:   'bg-red-500/15 text-red-400',
+                working: 'bg-brand-500/15 text-brand-400',
+            };
+            const dots = {
+                info:    'bg-sky-400',
+                success: 'bg-emerald-400',
+                warning: 'bg-amber-400',
+                error:   'bg-red-400',
+                working: 'bg-brand-400 status-pulse',
+            };
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const el = document.createElement('div');
+            el.className = `flex items-start gap-3 px-3 py-2 rounded-xl ${colors[type]} text-xs animate-fade-in`;
+            el.innerHTML = `
+                <span class="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${dots[type]}"></span>
+                <span class="flex-1">${message}</span>
+                <span class="text-[10px] opacity-40 flex-shrink-0">${time}</span>
+            `;
+            statusLog.prepend(el);
+        }
+
+        // ── Utility: Agent Pill State ─────────────────────────────────
+        function setAgentState(agentName, state) {
+            const pill = agentPills[agentName];
+            if (!pill) return;
+            const dot = pill.querySelector('span');
+
+            pill.classList.remove('text-surface-200/50', 'text-brand-400', 'text-emerald-400', 'bg-brand-500/10', 'bg-emerald-500/10');
+            dot.classList.remove('bg-surface-200/20', 'bg-brand-400', 'bg-emerald-400', 'status-pulse');
+
+            switch (state) {
+                case 'idle':
+                    pill.classList.add('text-surface-200/50');
+                    dot.classList.add('bg-surface-200/20');
+                    break;
+                case 'working':
+                    pill.classList.add('text-brand-400', 'bg-brand-500/10');
+                    dot.classList.add('bg-brand-400', 'status-pulse');
+                    break;
+                case 'done':
+                    pill.classList.add('text-emerald-400', 'bg-emerald-500/10');
+                    dot.classList.add('bg-emerald-400');
+                    break;
+            }
+        }
+
+        function resetAgents() {
+            Object.keys(agentPills).forEach(a => setAgentState(a, 'idle'));
+        }
+
+        // ── Generate Recipe ───────────────────────────────────────────
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const ingredients = ingredientsInput.value.trim();
+            const cuisine = cuisineInput.value.trim();
+
+            if (!ingredients || !cuisine) {
+                logStatus('Please fill in both ingredients and cuisine preference.', 'warning');
+                return;
+            }
+
+            // Reset state
+            resetAgents();
+            currentRecipeId = null;
+            analyzeBtn.classList.add('hidden');
+            analyzeBtn.classList.remove('flex');
+            nutritionCard.classList.add('hidden');
+            recipeContent.classList.add('hidden');
+            recipeEmpty.classList.add('hidden');
+            recipeLoading.classList.remove('hidden');
+
+            // UI: loading
+            generateBtn.disabled = true;
+            generateBtnText.classList.add('hidden');
+            generateBtnLoading.classList.remove('hidden');
+            generateBtnLoading.classList.add('flex');
+
+            setAgentState('sous-chef', 'working');
+            logStatus('🍳 Sous-Chef is researching culinary trends & crafting your recipe...', 'working');
+
+            try {
+                const res = await fetch('/api/generate-recipe/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ingredients, cuisine }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Generation failed.');
+
+                currentRecipeId = data.id;
+                setAgentState('sous-chef', 'done');
+                setAgentState('archivist', 'working');
+                logStatus('✅ Sous-Chef delivered the recipe!', 'success');
+
+                // Render markdown
+                recipeLoading.classList.add('hidden');
+                recipeContent.innerHTML = marked.parse(data.recipe_body);
+                recipeContent.classList.remove('hidden');
+
+                setAgentState('archivist', 'done');
+                logStatus('💾 Archivist saved recipe to the database.', 'success');
+
+                // Show analyze button
+                analyzeBtn.classList.remove('hidden');
+                analyzeBtn.classList.add('flex');
+                analyzeBtn.disabled = false;
+
+                loadHistory();
+
+            } catch (err) {
+                setAgentState('sous-chef', 'idle');
+                logStatus(`❌ Error: ${err.message}`, 'error');
+                recipeLoading.classList.add('hidden');
+                recipeEmpty.classList.remove('hidden');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtnText.classList.remove('hidden');
+                generateBtnLoading.classList.add('hidden');
+                generateBtnLoading.classList.remove('flex');
+            }
+        });
+
+        // ── Analyze Nutrition ─────────────────────────────────────────
+        async function analyzeNutrition() {
+            if (!currentRecipeId) return;
+
+            // Show card with loading states
+            nutritionCard.classList.remove('hidden');
+            nutritionLoading.classList.remove('hidden');
+            nutritionContent.classList.add('hidden');
+            audioLoading.classList.remove('hidden');
+            audioPlayerContainer.classList.add('hidden');
+
+            analyzeBtn.disabled = true;
+            analyzeBtnText.classList.add('hidden');
+            analyzeBtnLoading.classList.remove('hidden');
+            analyzeBtnLoading.classList.add('flex');
+
+            setAgentState('nutritionist', 'working');
+            logStatus('🥦 Nutritionist is analyzing macro-nutrients...', 'working');
+
+            try {
+                const res = await fetch('/api/analyze-nutrition/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: currentRecipeId }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Analysis failed.');
+
+                setAgentState('nutritionist', 'done');
+                logStatus('✅ Nutritionist completed the analysis!', 'success');
+
+                // Render nutrition markdown
+                nutritionLoading.classList.add('hidden');
+                nutritionContent.innerHTML = marked.parse(data.nutrition_summary);
+                nutritionContent.classList.remove('hidden');
+
+                // Audio
+                setAgentState('narrator', 'done');
+                logStatus('🎙️ Narrator generated audio narration (Voice: Kore)', 'success');
+
+                audioLoading.classList.add('hidden');
+                if (data.audio_url) {
+                    audioPlayer.src = data.audio_url;
+                    audioPlayerContainer.classList.remove('hidden');
+
+                    audioPlayer.addEventListener('play', () => {
+                        audioIconPlay.classList.add('hidden');
+                        audioIconWave.classList.remove('hidden');
+                    });
+                    audioPlayer.addEventListener('pause', () => {
+                        audioIconPlay.classList.remove('hidden');
+                        audioIconWave.classList.add('hidden');
+                    });
+                    audioPlayer.addEventListener('ended', () => {
+                        audioIconPlay.classList.remove('hidden');
+                        audioIconWave.classList.add('hidden');
+                    });
+                }
+
+                setAgentState('archivist', 'done');
+                logStatus('💾 Archivist updated the record with nutrition data.', 'success');
+
+                // Smoothly scroll to nutrition
+                nutritionCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (err) {
+                setAgentState('nutritionist', 'idle');
+                setAgentState('narrator', 'idle');
+                logStatus(`❌ Error: ${err.message}`, 'error');
+                nutritionLoading.classList.add('hidden');
+                audioLoading.classList.add('hidden');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtnText.classList.remove('hidden');
+                analyzeBtnLoading.classList.add('hidden');
+                analyzeBtnLoading.classList.remove('flex');
+            }
+        }
+
+        // ── Load History ──────────────────────────────────────────────
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/recipes/');
+                const data = await res.json();
+
+                if (data.recipes.length === 0) {
+                    historyList.innerHTML = '<div class="text-xs text-surface-200/30 text-center py-4">No recipes yet</div>';
+                    return;
+                }
+
+                historyList.innerHTML = data.recipes.map(r => {
+                    const date = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const hasNutrition = r.nutrition_summary ? '🥦' : '';
+                    const hasAudio = r.audio_url ? '🎙️' : '';
+                    return `
+                        <button onclick="loadRecipe(${r.id})" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl bg-surface-900/40 hover:bg-surface-900/70 transition-all duration-200 group">
+                            <div class="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-xs font-bold text-brand-400 flex-shrink-0 group-hover:bg-brand-500/20 transition-colors">
+                                #${r.id}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-white truncate">${r.cuisine} cuisine</p>
+                                <p class="text-[10px] text-surface-200/30 truncate">${r.ingredients.substring(0, 50)}...</p>
+                            </div>
+                            <div class="flex items-center gap-1 text-xs flex-shrink-0">
+                                ${hasNutrition} ${hasAudio}
+                            </div>
+                        </button>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to load history:', err);
+            }
+        }
+
+        // ── Load a specific recipe from history ───────────────────────
+        async function loadRecipe(id) {
+            try {
+                const res = await fetch('/api/recipes/');
+                const data = await res.json();
+                const recipe = data.recipes.find(r => r.id === id);
+                if (!recipe) return;
+
+                currentRecipeId = recipe.id;
+
+                // Show recipe
+                recipeEmpty.classList.add('hidden');
+                recipeLoading.classList.add('hidden');
+                recipeContent.innerHTML = marked.parse(recipe.recipe_body);
+                recipeContent.classList.remove('hidden');
+
+                // Show analyze button
+                analyzeBtn.classList.remove('hidden');
+                analyzeBtn.classList.add('flex');
+                analyzeBtn.disabled = false;
+
+                // If nutrition exists, show it
+                if (recipe.nutrition_summary) {
+                    nutritionCard.classList.remove('hidden');
+                    nutritionLoading.classList.add('hidden');
+                    nutritionContent.innerHTML = marked.parse(recipe.nutrition_summary);
+                    nutritionContent.classList.remove('hidden');
+                    audioLoading.classList.add('hidden');
+
+                    if (recipe.audio_url) {
+                        audioPlayer.src = recipe.audio_url;
+                        audioPlayerContainer.classList.remove('hidden');
+                    }
+                } else {
+                    nutritionCard.classList.add('hidden');
+                }
+
+                // Update agents
+                resetAgents();
+                setAgentState('sous-chef', 'done');
+                setAgentState('archivist', 'done');
+                if (recipe.nutrition_summary) {
+                    setAgentState('nutritionist', 'done');
+                    setAgentState('narrator', 'done');
+                }
+
+                logStatus(`📚 Loaded recipe #${id} from the Archives.`, 'info');
+
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            } catch (err) {
+                logStatus(`❌ Failed to load recipe: ${err.message}`, 'error');
+            }
+        }
+
+        // ── Init ──────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+            logStatus('System initialized. All 4 agents standing by.', 'info');
+        });
+    </script>
+</body>
+</html>
